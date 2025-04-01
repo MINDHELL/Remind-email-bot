@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types
 
 # Load environment variables
-TOKEN = os.getenv("7920072240:AAFwCTASvGi65oRkHRBm1275Mte8p3Q6p0E")
-CHAT_ID = os.getenv("-1002652118002")  # Set this in your Koyeb environment variables
+TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")  # Set this in your Koyeb environment variables
 
 # Reminder Configuration
 REMINDER_INTERVAL_DAYS = 6
