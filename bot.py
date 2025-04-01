@@ -2,7 +2,9 @@ import asyncio
 import datetime
 import os
 from aiogram import Bot, Dispatcher, types
-from aiogram.utils import executor
+from aiogram.fsm.context import FSMContext
+from aiogram.types import ParseMode
+from aiogram import Application
 from fastapi import FastAPI
 import uvicorn
 from dotenv import load_dotenv
@@ -50,4 +52,4 @@ def read_root():
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.create_task(send_reminder())
-    executor.start_polling(dp, skip_updates=True)
+    app.run_polling()
