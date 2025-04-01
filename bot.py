@@ -1,100 +1,28 @@
-import asyncio
-import datetime
-import os
-from telegram import Bot, ParseMode, Update
-from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
-from fastapi import FastAPI
-import uvicorn
-from dotenv import load_dotenv
-import logging
+import os import time import threading from flask import Flask from telegram import Update, Bot from telegram.ext import Updater, CommandHandler, CallbackContext
 
-load_dotenv()
+TOKEN = os.getenv("BOT_TOKEN") PORT = int(os.getenv("PORT", 8080))
 
-TOKEN = os.getenv("BOT_TOKEN")  # Ensure your token is in a .env file
-CHAT_ID = os.getenv("CHAT_ID")  # Optional: If you have a specific chat ID
+bot = Bot(token=TOKEN) updater = Updater(token=TOKEN, use_context=True) dp = updater.dispatcher
 
-bot = Bot(token=TOKEN)
-app = FastAPI()
+user_reminders = {}
 
-reminder_times = {}
+def send_reminder(user_id): while user_id in user_reminders: time.sleep(1800)  # 30 minutes if user_id in user_reminders and user_reminders[user_id]['mode'] == 'active': bot.send_message(user_id, "Reminder: Change your email!") else: break
 
-# Set up logging
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+def start(update: Update, context: CallbackContext): user_id = update.message.chat_id if user_id in user_reminders: update.message.reply_text("You're already subscribed to reminders!") else: next_change = time.time() + 6 * 24 * 60 * 60 user_reminders[user_id] = {'mode': 'active', 'next_change': next_change} threading.Thread(target=send_reminder, args=(user_id,)).start() update.message.reply_text("Welcome! You'll get reminders every 30 minutes until you confirm.")
 
-# Health check endpoint
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+def check(update: Update, context: CallbackContext): user_id = update.message.chat_id if user_id in user_reminders: next_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(user_reminders[user_id]['next_change'])) update.message.reply_text(f"Your next email change is scheduled on: {next_time}") else: update.message.reply_text("You're not subscribed to reminders.")
 
-# Command: /start
-async def start_command(update: Update, context):
-    welcome_text = "<b>✨ Welcome! ✨</b>\n\n🚀 I will remind you to change your Telegram email every 7 days! 🔄\n\nUse <b>/done</b> ✅ when you've changed it!"
-    try:
-        await update.message.reply(welcome_text, parse_mode=ParseMode.HTML)
-    except Exception as e:
-        logging.error(f"Error in /start command: {e}")
-        await update.message.reply("Something went wrong! Please try again later.")
+def done(update: Update, context: CallbackContext): user_id = update.message.chat_id if user_id in user_reminders: next_change = time.time() + 6 * 24 * 60 * 60 user_reminders[user_id] = {'mode': 'inactive', 'next_change': next_change} next_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(next_change)) update.message.reply_text(f"Thanks! Your next email change is scheduled on: {next_time}") else: update.message.reply_text("You're not subscribed to reminders.")
 
-# Command: /done
-async def done_command(update: Update, context):
-    user_id = update.message.from_user.id
-    try:
-        next_reminder = datetime.datetime.now() + datetime.timedelta(days=6, hours=23, minutes=30)
-        reminder_times[user_id] = next_reminder
-        response_text = f"✅ <b>Thanks!</b> Your next reminder is on: 📅 <b>{next_reminder.strftime('%d %B %Y, %H:%M:%S')}</b> ⏳"
-        await update.message.reply(response_text, parse_mode=ParseMode.HTML)
-    except Exception as e:
-        logging.error(f"Error in /done command: {e}")
-        await update.message.reply("Something went wrong! Please try again later.")
+dp.add_handler(CommandHandler("start", start)) dp.add_handler(CommandHandler("check", check)) dp.add_handler(CommandHandler("done", done))
 
-# Send reminders function
-async def send_reminder():
-    while True:
-        now = datetime.datetime.now()
-        for user_id, reminder_time in reminder_times.items():
-            try:
-                if reminder_time.date() == now.date():
-                    time_left = (reminder_time - now).total_seconds()
-                    if time_left <= 0:
-                        reminder_message = "⏳ <b>Reminder:</b> Don't forget to change your Telegram email today! 📩\n\nUse <b>/done</b> ✅ after updating it!"
-                        await bot.send_message(user_id, reminder_message, parse_mode=ParseMode.HTML)
-                        reminder_times[user_id] = now + datetime.timedelta(minutes=30)
-            except Exception as e:
-                logging.error(f"Error in send_reminder: {e}")
-        await asyncio.sleep(1800)  # Check every 30 minutes
+app = Flask(name)
 
-# Main entry point for the bot
-def main():
-    # Initialize the Updater and Dispatcher for handling commands
-    try:
-        updater = Updater(token=TOKEN, use_context=True)
-        dispatcher = updater.dispatcher
+@app.route('/') def home(): return "Bot is running!"
 
-        # Command handlers
-        start_handler = CommandHandler('start', start_command)
-        done_handler = CommandHandler('done', done_command)
+def run_flask(): app.run(host='0.0.0.0', port=PORT)
 
-        dispatcher.add_handler(start_handler)
-        dispatcher.add_handler(done_handler)
+def run_telegram(): updater.start_polling() updater.idle()
 
-        # Start polling for updates
-        updater.start_polling()
-        logging.info("Bot started successfully!")
+if name == "main": threading.Thread(target=run_flask).start() run_telegram()
 
-    except Exception as e:
-        logging.error(f"Error in bot setup: {e}")
-
-if __name__ == "__main__":
-    # Run the FastAPI app in the background and start the bot
-    loop = asyncio.get_event_loop()
-    loop.create_task(send_reminder())  # Start the reminder task
-
-    # Run the FastAPI app using Uvicorn
-    try:
-        uvicorn.run(app, host="0.0.0.0", port=8080)
-    except Exception as e:
-        logging.error(f"Error starting FastAPI app: {e}")
-        print(f"Error starting FastAPI app: {e}")
-
-    # Run the bot in the main thread
-    main()
