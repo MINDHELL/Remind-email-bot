@@ -1,5 +1,4 @@
-aiohttp
-aiogram==3.0.0
+aiogram==3.x
 fastapi
 uvicorn
-dotenv
+python-dotenv
