@@ -1,44 +1,54 @@
 import asyncio
+import datetime
 import os
-from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types
+from aiogram.types import ParseMode
+from aiogram.utils import executor
+from fastapi import FastAPI
+import uvicorn
+from dotenv import load_dotenv
 
-# Load environment variables
+load_dotenv()
+
 TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")  # Set this in your Koyeb environment variables
+CHAT_ID = os.getenv("CHAT_ID")  # Replace with actual chat ID if needed
 
-# Reminder Configuration
-REMINDER_INTERVAL_DAYS = 6
-NEXT_CHANGE_DATE = datetime.now() + timedelta(days=REMINDER_INTERVAL_DAYS)
+bot = Bot(token=TOKEN, parse_mode=ParseMode.HTML)
+dp = Dispatcher(bot)
+app = FastAPI()
 
-# Initialize bot and dispatcher
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
+reminder_times = {}
+
+@dp.message_handler(commands=['start'])
+async def start_command(message: types.Message):
+    welcome_text = "<b>✨ Welcome! ✨</b>\n\n🚀 I will remind you to change your Telegram email every 7 days! 🔄\n\nUse <b>/done</b> ✅ when you've changed it!"
+    await message.reply(welcome_text)
+
+@dp.message_handler(commands=['done'])
+async def done_command(message: types.Message):
+    user_id = message.from_user.id
+    next_reminder = datetime.datetime.now() + datetime.timedelta(days=6, hours=23, minutes=30)
+    reminder_times[user_id] = next_reminder
+    response_text = f"✅ <b>Thanks!</b> Your next reminder is on: 📅 <b>{next_reminder.strftime('%d %B %Y, %H:%M:%S')}</b> ⏳"
+    await message.reply(response_text)
 
 async def send_reminder():
-    """ Sends a reminder message every 6 days """
-    global NEXT_CHANGE_DATE
     while True:
-        await bot.send_message(CHAT_ID, f"🔔 Reminder: Change your Telegram login email today!\nNext change: {NEXT_CHANGE_DATE.strftime('%Y-%m-%d')}")
-        NEXT_CHANGE_DATE += timedelta(days=REMINDER_INTERVAL_DAYS)
-        await asyncio.sleep(REMINDER_INTERVAL_DAYS * 24 * 60 * 60)  # Wait 6 days
+        now = datetime.datetime.now()
+        for user_id, reminder_time in reminder_times.items():
+            if reminder_time.date() == now.date():
+                time_left = (reminder_time - now).total_seconds()
+                if time_left <= 0:
+                    reminder_message = "⏳ <b>Reminder:</b> Don't forget to change your Telegram email today! 📩\n\nUse <b>/done</b> ✅ after updating it!"
+                    await bot.send_message(user_id, reminder_message)
+                    reminder_times[user_id] = now + datetime.timedelta(minutes=30)
+        await asyncio.sleep(1800)  # Check every 30 minutes
 
-@dp.message(lambda message: message.text == "/start")
-async def start_command(message: types.Message):
-    """ Sends a welcome message when the user sends /start """
-    await message.answer("👋 Welcome! I will remind you to change your Telegram login email every 6 days.\n\nUse /next to check the next change date.")
-
-@dp.message(lambda message: message.text == "/next")
-async def next_change(message: types.Message):
-    """ Sends the next email change date when the user sends /next """
-    time_left = NEXT_CHANGE_DATE - datetime.now()
-    days_left = time_left.days
-    await message.answer(f"📅 Next email change: {NEXT_CHANGE_DATE.strftime('%Y-%m-%d')}\n⏳ Time left: {days_left} days")
-
-async def main():
-    """ Starts the bot and the reminder loop """
-    asyncio.create_task(send_reminder())  # Run reminder loop in the background
-    await dp.start_polling(bot)
+@app.get("/")
+def read_root():
+    return {"status": "🚀 Bot is running smoothly!"}
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.create_task(send_reminder())
+    executor.start_polling(dp, skip_updates=True)
