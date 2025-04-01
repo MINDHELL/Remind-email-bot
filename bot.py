@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import os
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ParseMode
 from aiogram.utils import executor
 from fastapi import FastAPI
 import uvicorn
@@ -13,7 +12,7 @@ load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")  # Replace with actual chat ID if needed
 
-bot = Bot(token=TOKEN, parse_mode=ParseMode.HTML)
+bot = Bot(token=TOKEN, parse_mode='HTML')
 dp = Dispatcher(bot)
 app = FastAPI()
 
