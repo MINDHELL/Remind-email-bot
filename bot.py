@@ -5,8 +5,8 @@ from aiogram.utils import executor
 import os
 
 # Bot Configuration
-TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")  # Replace with your Telegram ID in environment variables
+TOKEN = os.getenv("7920072240:AAFwCTASvGi65oRkHRBm1275Mte8p3Q6p0E")
+CHAT_ID = os.getenv("-1002652118002")  # Replace with your Telegram ID in environment variables
 REMINDER_INTERVAL_DAYS = 6
 NEXT_CHANGE_DATE = datetime.now() + timedelta(days=REMINDER_INTERVAL_DAYS)
 
