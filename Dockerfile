@@ -15,7 +15,7 @@ ENV BOT_TOKEN="your_bot_token"
 ENV CHAT_ID="your_chat_id"
 
 # Expose the port for FastAPI app (default is 80)
-EXPOSE 80
+EXPOSE 8080
 
 # Run the bot
-CMD ["uvicorn", "bot:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "bot:app", "--host", "0.0.0.0", "--port", "8080"]
