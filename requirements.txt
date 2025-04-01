@@ -1,4 +1,4 @@
-aiogram==3.x
+aiogram==2.25
 fastapi
 uvicorn
 python-dotenv
