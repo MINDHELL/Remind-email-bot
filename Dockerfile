@@ -1,21 +1,21 @@
-# Use an official Python runtime as a parent image
 FROM python:3.9-slim
 
-# Set the working directory in the container
+# Set working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
-
-# Install the required dependencies
+# Copy requirements.txt and install dependencies
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Set environment variables for your bot token and chat ID
-ENV BOT_TOKEN="7920072240:AAFwCTASvGi65oRkHRBm1275Mte8p3Q6p0E"
-ENV CHAT_ID="-1002652118002"
+# Copy the bot.py file
+COPY bot.py /app/
 
-# Make port 80 available to the world outside this container
+# Set environment variables for the bot token and chat ID
+ENV BOT_TOKEN="your_bot_token"
+ENV CHAT_ID="your_chat_id"
+
+# Expose the port for FastAPI app (default is 80)
 EXPOSE 80
 
-# Run the bot when the container launches
-CMD ["python", "bot.py"]
+# Run the bot
+CMD ["uvicorn", "bot:app", "--host", "0.0.0.0", "--port", "80"]
